@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
-	_ "net/http"
+	_ "log"
+	"net/http"
+	"os"
 )
 
 func main() {
@@ -26,15 +28,45 @@ func main() {
 	)
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
-
-	db, err := sql.Open("postgres", connStr)
+	db, err := openDB(connStr)
 	if err != nil {
-		panic(err)
+		fmt.Println("Error connecting to the database:", err)
+		os.Exit(1)
 	}
 	defer db.Close()
+	//fmt.Println("Connected to the database successfully!")
+
+	http.HandleFunc("/index", func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Hello from the index page!"))
+	})
+	
+	fmt.Println("Server listening on port 4000")
+	err = http.ListenAndServe("127.0.0.1:4000", nil)
+	if err != nil {
+		fmt.Println("Server error:", err)
+	}
+
+	// db, err := sql.Open("postgres", connStr)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer db.Close()
+	// err = db.Ping()
+	// if err != nil {
+	// 	panic(err)
+	// }
+}
+
+func openDB(uri string) (*sql.DB, error) {
+	db, err := sql.Open("postgres", uri)
+	if err != nil {
+		return nil, err
+	}
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		db.Close()
+		return nil, err
 	}
-	fmt.Println("Successfully connected to the database")
+	return db, nil
 }
